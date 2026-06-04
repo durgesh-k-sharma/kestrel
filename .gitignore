@@ -1,1 +1,4 @@
 /target/
+.codegraph/
+.forge/
+docs/
