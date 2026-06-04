@@ -1,0 +1,12 @@
+[package]
+name = "kestrel_preprocessor"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description.workspace = true
+
+[dependencies]
+kestrel_common = { path = "../kestrel_common" }

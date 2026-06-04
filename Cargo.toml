@@ -1,0 +1,31 @@
+[workspace]
+members = [
+    "kestrel",
+    "kestrel_common",
+    "kestrel_lexer",
+    "kestrel_preprocessor",
+    "kestrel_parser",
+    "kestrel_sema",
+    "kestrel_ir",
+    "kestrel_opt",
+    "kestrel_codegen",
+    "kestrel_driver",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.96.0"
+license = "MIT OR Apache-2.0"
+authors = ["Durgesh Kumar Sharma"]
+repository = "https://github.com/durgesh-k-sharma/kestrel"
+description = "Kestrel — A C11 compiler written in Rust"
+keywords = ["compiler", "c11", "rust", "codegen", "ssa"]
+categories = ["compilers", "development-tools"]
+
+[workspace.dependencies]
+
+[profile.release]
+opt-level = 2
+lto = true

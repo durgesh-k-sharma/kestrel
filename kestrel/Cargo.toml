@@ -1,0 +1,19 @@
+[package]
+name = "kestrel"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Kestrel — A C11 compiler written in Rust (top-level re-export crate)"
+
+[dependencies]
+kestrel_common = { path = "../kestrel_common" }
+kestrel_lexer = { path = "../kestrel_lexer" }
+kestrel_preprocessor = { path = "../kestrel_preprocessor" }
+kestrel_parser = { path = "../kestrel_parser" }
+kestrel_sema = { path = "../kestrel_sema" }
+kestrel_ir = { path = "../kestrel_ir" }
+kestrel_opt = { path = "../kestrel_opt" }
+kestrel_codegen = { path = "../kestrel_codegen" }

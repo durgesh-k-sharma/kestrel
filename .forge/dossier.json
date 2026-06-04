@@ -1,0 +1,197 @@
+{
+  "dossier_format_version": "1.0.0",
+  "project_metadata": {
+    "session_id": "eeb2d55a-8f15-48cd-91da-89f2d433d00b",
+    "title": "C Compiler in Rust",
+    "topic": "Building a production-ready C compiler written in Rust",
+    "goal": "Ship an open-source C compiler in Rust that is educational, well-tested, and production-grade \u2014 targeting x86_64 with a clean architecture that enables multi-backend support",
+    "compiled_at": "2026-06-04T07:49:52.447845"
+  },
+  "decisions": [
+    {
+      "id": 4,
+      "label": "Decision: C11 target standard",
+      "content": "Decision: Target C11 as the initial standard. This includes _Generic, _Static_assert, _Atomic, anonymous structs/unions, alignas/alignof. The architecture must support the full C11 feature set. This matches rcc's target and provides a complete, practical compiler.",
+      "status": "active",
+      "dependencies": [
+        3
+      ],
+      "constrained_by": [],
+      "assumes": []
+    },
+    {
+      "id": 5,
+      "label": "Decision: Multi-backend (x86-64, ARM64, RISC-V)",
+      "content": "Decision: Multi-backend from the start. x86-64, ARM64 (AArch64), and RISC-V backends. Emit assembly text and use external assembler/linker (as + ld). Define a clean Backend trait/interface so codegen is abstracted. Each backend implements: register allocation, instruction selection, calling convention, assembly emission. This matches rcc's approach but with assembly emission instead of direct machine code.",
+      "status": "active",
+      "dependencies": [],
+      "constrained_by": [],
+      "assumes": []
+    },
+    {
+      "id": 6,
+      "label": "Decision: Integrated C preprocessor",
+      "content": "Decision: Integrated C preprocessor. Full preprocessor including #include, #define (function-like + object-like), conditional compilation (#ifdef/#ifndef/#endif/#elif/#else), #pragma, token pasting (##), stringizing (#), variadic macros (__VA_ARGS__), and #error/#warning. The preprocessor is a separate phase that produces a token stream for the parser. This makes the compiler self-contained \u2014 no external cpp needed.",
+      "status": "active",
+      "dependencies": [],
+      "constrained_by": [],
+      "assumes": []
+    },
+    {
+      "id": 7,
+      "label": "Decision: SSA-based IR architecture",
+      "content": "Decision: SSA-based IR. The compiler pipeline: Source -> Preprocessor -> Lexer -> Parser -> Semantic Analysis -> AST -> SSA IR -> Optimizations -> Backend (x86-64/ARM64/RISC-V). SSA provides clean separation between frontend and backend. Each backend implements a trait that consumes SSA, not AST. This enables: (1) meaningful optimizations on SSA, (2) multi-backend support without duplicating frontend logic, (3) educational value \u2014 SSA is the standard IR in modern compilers.",
+      "status": "active",
+      "dependencies": [
+        5
+      ],
+      "constrained_by": [],
+      "assumes": []
+    },
+    {
+      "id": 8,
+      "label": "Decision: 11 standard optimization passes",
+      "content": "Decision: Standard optimizations at launch \u2014 11 optimization passes on the SSA IR: (1) constant folding, (2) constant propagation, (3) dead code elimination, (4) common subexpression elimination, (5) loop-invariant code motion, (6) strength reduction, (7) register allocation (linear scan), (8) peephole optimization, (9) function inlining (simple), (10) tail call optimization, (11) basic block reordering. This matches rcc's optimization level and produces genuinely good code. All optimizations operate on SSA form.",
+      "status": "active",
+      "dependencies": [
+        7
+      ],
+      "constrained_by": [],
+      "assumes": []
+    },
+    {
+      "id": 9,
+      "label": "Decision: 9-crate workspace structure",
+      "content": "Decision: Cargo workspace with 9 crates: (1) rcc_common \u2014 shared types, error handling, diagnostics, source location tracking, (2) rcc_lexer \u2014 tokenizer/lexer, (3) rcc_preprocessor \u2014 full C preprocessor, (4) rcc_parser \u2014 recursive descent parser and AST definition, (5) rcc_sema \u2014 semantic analysis, type checking, symbol table, (6) rcc_ir \u2014 SSA IR definition and AST-to-SSA conversion, (7) rcc_opt \u2014 11 optimization passes on SSA, (8) rcc_codegen \u2014 Backend trait + x86-64/ARM64/RISC-V implementations, (9) rcc_driver \u2014 CLI driver. Plus a top-level rcc crate that re-exports the library for users who want to use it as a library.",
+      "status": "active",
+      "dependencies": [],
+      "constrained_by": [],
+      "assumes": []
+    },
+    {
+      "id": 10,
+      "label": "Decision: Comprehensive 5-layer testing",
+      "content": "Decision: Comprehensive testing at launch. Five layers: (1) Unit tests in every crate following TDD, (2) Integration tests that compile C files, assemble, link, and run them checking stdout/exit code, (3) chibicc test suite (41 tests \u2014 the de facto standard for small C compilers), (4) Differential testing against GCC/Clang \u2014 compile same C file with both compilers, run both binaries, assert identical output, (5) Fuzzing with cargo-fuzz targeting lexer and parser. Differential testing is the key differentiator that catches codegen bugs unit tests miss.",
+      "status": "active",
+      "dependencies": [],
+      "constrained_by": [],
+      "assumes": []
+    },
+    {
+      "id": 11,
+      "label": "Decision: Project name \u2014 Kestrel",
+      "content": "Decision: Project name is \"kestrel\". Distinctive, memorable, no naming conflicts. Short, easy to type and search. The CLI binary will be `kestrel`, the GitHub repo will be `durgesh-k-sharma/kestrel`, the crate prefix will be `kestrel_` (e.g., kestrel_lexer, kestrel_parser, kestrel_codegen).",
+      "status": "active",
+      "dependencies": [],
+      "constrained_by": [],
+      "assumes": []
+    },
+    {
+      "id": 12,
+      "label": "Decision: Dual MIT/Apache 2.0 license",
+      "content": "Decision: Dual MIT/Apache 2.0 license. The Rust ecosystem standard \u2014 maximizes adoption while providing patent protection. Same license as rustc, tokio, serde. Users can choose either license.",
+      "status": "active",
+      "dependencies": [],
+      "constrained_by": [],
+      "assumes": []
+    },
+    {
+      "id": 13,
+      "label": "Decision: GCC-compatible CLI + subcommands",
+      "content": "Decision: GCC-compatible CLI with rich subcommands. GCC flags: -c (compile only), -S (emit assembly), -E (preprocess only), -O0/-O1/-O2 (optimization level), -g (debug info), -o (output), --target (x86_64/arm64/riscv64). Subcommands: compile (default \u2014 full pipeline), check (parse + semantic analysis only, no codegen), preprocess (preprocessor only), ast (dump AST), ir (dump SSA IR), asm (dump assembly). This gives users the familiar GCC interface plus educational/debugging subcommands.",
+      "status": "active",
+      "dependencies": [],
+      "constrained_by": [],
+      "assumes": []
+    },
+    {
+      "id": 14,
+      "label": "Decision: Library + CLI",
+      "content": "Decision: Both library and CLI. The 8 core crates form the reusable library. kestrel_driver is a thin CLI wrapper. This enables: (1) embedding in other Rust programs, (2) LSP server for IDE integration, (3) easier programmatic testing, (4) other tools building on top (static analyzers, formatters). Users can `use kestrel_lexer::Lexer;` etc. A top-level `kestrel` crate re-exports the full library API for convenience.",
+      "status": "active",
+      "dependencies": [],
+      "constrained_by": [],
+      "assumes": []
+    },
+    {
+      "id": 15,
+      "label": "Decision: Full CI/CD from day one",
+      "content": "Decision: Full CI/CD from day one. GitHub Actions workflows: (1) CI \u2014 cargo check, cargo test, cargo clippy, cargo fmt --check, build all targets, chibicc test suite, differential tests against GCC, (2) Release \u2014 on tag push, build release binaries for Linux (x86_64, ARM64), macOS (x86_64, ARM64), Windows (x86_64), create GitHub Release with artifacts, publish to crates.io, (3) Coverage \u2014 cargo-llvm-cov, 80%+ target, coverage badge, (4) Docs \u2014 cargo doc on every push, hosted on GitHub Pages. Pre-commit hooks via husky-style setup: cargo fmt, cargo clippy, cargo check.",
+      "status": "active",
+      "dependencies": [],
+      "constrained_by": [],
+      "assumes": []
+    },
+    {
+      "id": 16,
+      "label": "Decision: Vertical slice milestones M0-M10",
+      "content": "Decision: Vertical slice milestones M0-M10. M0: Scaffold \u2014 workspace, CI/CD, project structure, hello world. M1: Lexer + Preprocessor \u2014 tokenize and preprocess C source. M2: Parser \u2014 parse C11 grammar into AST. M3: Semantic analysis \u2014 type checking, symbol table. M4: SSA IR \u2014 AST to SSA conversion. M5: x86-64 backend \u2014 emit x86-64 assembly from SSA (first working compiler \u2014 can compile and run simple C programs). M6: Optimizations \u2014 11 optimization passes on SSA. M7: ARM64 backend. M8: RISC-V backend. M9: Standard library / runtime \u2014 minimal libc. M10: Polish \u2014 LSP server, documentation, crates.io publish. Each milestone produces a testable, demonstrable artifact. Working compiler achieved at M5.",
+      "status": "active",
+      "dependencies": [],
+      "constrained_by": [],
+      "assumes": []
+    }
+  ],
+  "constraints": [],
+  "requirements": [],
+  "risks": [
+    {
+      "id": 17,
+      "label": "Risk: C preprocessor complexity",
+      "content": "Risk: C preprocessor complexity. The C preprocessor is essentially a separate language with token pasting, stringizing, variadic macros, and recursive expansion rules. It's ~30-40% of total compiler complexity. Mitigation: Implement in a separate crate (kestrel_preprocessor) with extensive unit tests. Reference: the C99/C11 standard sections 6.10.x. Use the chibicc test suite for validation.",
+      "status": "active",
+      "dependencies": [],
+      "constrained_by": [
+        6
+      ],
+      "assumes": []
+    },
+    {
+      "id": 18,
+      "label": "Risk: SSA IR construction correctness",
+      "content": "Risk: SSA IR construction correctness. Converting AST to SSA form requires correct dominance frontier computation, phi node placement, and variable renaming. Bugs here cause silent miscompilation. Mitigation: Extensive unit tests for SSA construction, validate SSA invariants after construction, differential testing against GCC from M5 onward.",
+      "status": "active",
+      "dependencies": [],
+      "constrained_by": [
+        7
+      ],
+      "assumes": []
+    },
+    {
+      "id": 19,
+      "label": "Risk: Multi-backend calling conventions",
+      "content": "Risk: Multi-backend calling conventions. Each target (x86-64, ARM64, RISC-V) has different calling conventions, register sets, and ABI requirements. Getting these wrong causes subtle bugs. Mitigation: Start with x86-64 System V ABI (most documented), use differential testing, reference the official ABI specifications for each target.",
+      "status": "active",
+      "dependencies": [],
+      "constrained_by": [
+        5
+      ],
+      "assumes": []
+    },
+    {
+      "id": 20,
+      "label": "Risk: Scope creep",
+      "content": "Risk: Scope creep. C11 is a large standard. It's tempting to implement everything at once. Mitigation: Strict milestone boundaries. Each milestone has a clear \"done\" criterion. Features not in the current milestone are deferred. The M5 goal is a working compiler for a C11 subset \u2014 not full C11.",
+      "status": "active",
+      "dependencies": [],
+      "constrained_by": [
+        4
+      ],
+      "assumes": []
+    }
+  ],
+  "assumptions": [],
+  "action_items": [],
+  "required_skills": [
+    {
+      "id": 21,
+      "label": "Skill mapping for Kestrel",
+      "content": "Skills required for Kestrel execution:\n- Phase 0 (Research): browser_navigate, terminal, forge-memory MCP\n- Phase 1 (Grilling): forge-memory MCP (init_session, record_qa, add_memory_node, add_memory_edge, generate_dossier)\n- Phase 2 (Execution):\n  - writing-plans: Write implementation plans for each milestone\n  - subagent-driven-development: Execute tasks via delegate_task subagents\n  - tdd: Test-driven development for each crate\n  - check-compiler-errors: Rust type checking after code changes\n  - requesting-code-review: Pre-commit verification\n  - verify-this: Verify critical claims\n  - thermos: Parallel security + quality review\n  - deslop: Remove AI code slop\n  - make-pr-easy-to-review: PR cleanup\n  - new-branch-and-pr: Branch + PR creation\n  - loop-on-ci: Monitor CI until green\n  - review-and-ship: Final review and merge\n  - github-repo-management: Create GitHub repo\n  - github-label-setup: Set up triage labels\n  - github-issues: Issue management\n  - systematic-debugging: Root cause debugging\n  - compiler-construction: Compiler-specific patterns\n  - code-quality-review: Structured code review\n  - setup-pre-commit: Husky pre-commit hooks",
+      "status": "active",
+      "dependencies": [],
+      "constrained_by": [],
+      "assumes": []
+    }
+  ],
+  "execution_plan": []
+}
